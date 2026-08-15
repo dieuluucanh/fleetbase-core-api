@@ -338,6 +338,7 @@ Route::prefix(config('fleetbase.api.routing.prefix', '/'))->namespace('Fleetbase
                                     $router->post('export-query', $controller('exportQuery'));
                                     $router->get('query-recommendations', $controller('getQueryRecommendations'));
                                     $router->get('export-formats', $controller('getExportFormats'));
+                                    $router->get('export-download/{filename}', $controller('download'))->name('reports.download');
                                     $router->post('{id}/execute', $controller('execute'));
                                     $router->post('{id}/export', $controller('export'));
                                 });
