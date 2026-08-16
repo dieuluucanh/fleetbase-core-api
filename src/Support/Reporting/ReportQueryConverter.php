@@ -155,7 +155,13 @@ class ReportQueryConverter
      */
     public function getAvailableExportFormats(): array
     {
-        return ReportQueryExporter::getSupportedFormats();
+        $formats = ReportQueryExporter::getSupportedFormats();
+
+        if (isset($formats['excel'])) {
+            $formats['xlsx'] = $formats['excel'];
+        }
+
+        return $formats;
     }
 
     /**
