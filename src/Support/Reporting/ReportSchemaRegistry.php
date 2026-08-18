@@ -105,6 +105,10 @@ class ReportSchemaRegistry
                 'max_rows'             => $table->getMaxRows(),
                 'has_auto_joins'       => !empty($table->getAutoJoinRelationships()),
                 'has_manual_joins'     => !empty($table->getManualJoinRelationships()),
+                'refreshable'          => $table->isRefreshable() ? [
+                    'command' => $table->getRefreshCommand(),
+                    'label'   => $table->getRefreshLabel(),
+                ] : null,
             ];
         }
 

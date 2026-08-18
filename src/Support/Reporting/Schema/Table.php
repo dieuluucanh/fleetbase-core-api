@@ -21,6 +21,8 @@ class Table
     protected int $cacheTtl             = 3600;
     protected array $permissions        = [];
     protected array $meta               = [];
+    protected ?string $refreshCommand    = null;
+    protected ?string $refreshLabel      = null;
 
     public function __construct(string $name)
     {
@@ -225,6 +227,20 @@ class Table
         return $this;
     }
 
+    /**
+     * Mark this table as refreshable (pre-aggregated data source).
+     *
+     * When set, the Report Builder UI will show a "Refresh Data" button that
+     * triggers the given artisan command before executing the query.
+     */
+    public function refreshable(string $command, string $label = 'Refresh Data'): self
+    {
+        $this->refreshCommand = $command;
+        $this->refreshLabel   = $label;
+
+        return $this;
+    }
+
     // Getters
     public function getName(): string
     {
@@ -308,6 +324,21 @@ class Table
         }
 
         return $this->meta[$key] ?? null;
+    }
+
+    public function getRefreshCommand(): ?string
+    {
+        return $this->refreshCommand;
+    }
+
+    public function getRefreshLabel(): ?string
+    {
+        return $this->refreshLabel;
+    }
+
+    public function isRefreshable(): bool
+    {
+        return $this->refreshCommand !== null;
     }
 
     /**
@@ -444,6 +475,10 @@ class Table
             'cache_ttl'                  => $this->cacheTtl,
             'permissions'                => $this->permissions,
             'meta'                       => $this->meta,
+            'refreshable'                => $this->isRefreshable() ? [
+                'command' => $this->refreshCommand,
+                'label'   => $this->refreshLabel,
+            ] : null,
         ];
     }
 

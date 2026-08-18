@@ -11,6 +11,7 @@ use Fleetbase\Support\Reporting\ReportQueryValidator;
 use Fleetbase\Support\Reporting\ReportSchemaRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 class ReportController extends FleetbaseController
@@ -673,6 +674,86 @@ class ReportController extends FleetbaseController
                     'action'     => 'validate_computed_column',
                     'expression' => $request->input('expression'),
                     'table_name' => $request->input('table_name'),
+                ]),
+                500
+            );
+        }
+    }
+
+    /**
+     * Refresh a pre-aggregated data source by running its registered artisan command.
+     *
+     * Accepts POST with:
+     *   - table_name (required): the data source table name (e.g. "driver_activity_daily")
+     *   - date (optional): date argument for the command, defaults to "today"
+     */
+    public function refreshDataSource(Request $request): JsonResponse
+    {
+        $tableName = $request->input('table_name');
+        $date      = $request->input('date', 'today');
+
+        if (!$tableName) {
+            return response()->json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'VALIDATION_ERROR',
+                    'message' => 'table_name is required',
+                ],
+            ], 400);
+        }
+
+        try {
+            $registry = app(ReportSchemaRegistry::class);
+            $table    = $registry->getTable($tableName);
+
+            if (!$table) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => [
+                        'code'    => 'TABLE_NOT_FOUND',
+                        'message' => "Data source table '{$tableName}' is not registered",
+                    ],
+                ], 404);
+            }
+
+            if (!$table->isRefreshable()) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => [
+                        'code'    => 'NOT_REFRESHABLE',
+                        'message' => "Data source '{$tableName}' does not support refresh",
+                    ],
+                ], 400);
+            }
+
+            $command = $table->getRefreshCommand();
+            $exitCode = Artisan::call($command, ['--date' => $date]);
+
+            if ($exitCode === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $table->getRefreshLabel() . ' completed successfully',
+                    'meta'    => [
+                        'table_name' => $tableName,
+                        'command'    => $command,
+                        'date'       => $date,
+                        'timestamp'  => now()->toISOString(),
+                    ],
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'COMMAND_FAILED',
+                    'message' => "Refresh command exited with code {$exitCode}",
+                ],
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json(
+                $this->errorHandler->handleError($e, [
+                    'action'     => 'refresh_data_source',
+                    'table_name' => $tableName,
                 ]),
                 500
             );
