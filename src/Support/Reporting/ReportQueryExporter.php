@@ -308,6 +308,10 @@ class ReportQueryExporter
             return '';
         }
 
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_SLASHES);
+        }
+
         $type = $column['type'] ?? 'string';
 
         switch ($type) {
@@ -377,7 +381,7 @@ class ReportQueryExporter
             'columns_count' => count($this->columns),
         ]) as $key => $value) {
             $metadataSheet->setCellValue("A{$row}", Str::title(str_replace('_', ' ', $key)));
-            $metadataSheet->setCellValue("B{$row}", $value);
+            $metadataSheet->setCellValue("B{$row}", is_array($value) ? json_encode($value, JSON_UNESCAPED_SLASHES) : $value);
             $row++;
         }
 
